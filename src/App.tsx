@@ -25,6 +25,7 @@ import Sidebar from './components/Sidebar';
 import Filters from './components/Filters';
 import PropertyCard from './components/PropertyCard';
 import UploadModal from './components/UploadModal';
+import AuthModal from './components/AuthModal';
 
 // Dummy data for initial view or offline mode
 const DUMMY_PROPERTIES: Property[] = [
@@ -73,8 +74,10 @@ export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('explore');
+  const [preferredRole, setPreferredRole] = useState<UserRole>('client');
   const [properties, setProperties] = useState<Property[]>(DUMMY_PROPERTIES);
   const [filters, setFilters] = useState<SearchFilters>({
     location: '',
@@ -92,13 +95,13 @@ export default function App() {
           if (userDoc.exists()) {
             setUser(userDoc.data() as UserProfile);
           } else {
-            // New user - default to client role
+            // New user - use preferred role from AuthModal
             const newUser: UserProfile = {
               uid: firebaseUser.uid,
               displayName: firebaseUser.displayName || 'Anonymous',
               email: firebaseUser.email || '',
               photoURL: firebaseUser.photoURL || undefined,
-              role: 'client',
+              role: preferredRole,
               createdAt: Date.now(),
             };
             await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
@@ -219,11 +222,11 @@ export default function App() {
         <div className="flex items-center gap-3">
           {!user ? (
             <button 
-              onClick={() => signInWithGoogle()}
+              onClick={() => setIsAuthOpen(true)}
               className="flex items-center gap-2 px-6 py-3 bg-sky-500 text-white rounded-2xl font-semibold hover:bg-sky-600 shadow-lg shadow-sky-500/20 transition-all active:scale-95"
             >
               <LogIn className="w-5 h-5" />
-              <span>Login</span>
+              <span>Login / Register</span>
             </button>
           ) : (
             <div className="flex items-center gap-3">
@@ -372,6 +375,12 @@ export default function App() {
         isOpen={isUploadOpen} 
         onClose={() => setIsUploadOpen(false)} 
         onUpload={handleUpload} 
+      />
+
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onSuccess={(role) => setPreferredRole(role)}
       />
     </div>
   );
