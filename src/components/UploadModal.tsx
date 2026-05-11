@@ -1,0 +1,162 @@
+import React, { useState } from 'react';
+import { X, Upload, Home, MapPin, Coins, Image as ImageIcon } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Property } from '../types';
+
+interface UploadModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onUpload: (property: Partial<Property>) => Promise<void>;
+}
+
+export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalProps) {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    price: '',
+    type: 'rental' as 'rental' | 'sale',
+    address: '',
+    imageUrl: '',
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await onUpload({
+        ...formData,
+        price: Number(formData.price),
+        images: [formData.imageUrl || `https://picsum.photos/seed/${Math.random()}/1000/800`],
+        location: { lat: 0, lng: 0 }, // Placeholder
+      });
+      onClose();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-neutral-900/60 backdrop-blur-md"
+          />
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            className="relative w-full max-w-xl bg-white rounded-[2.5rem] p-8 shadow-2xl overflow-y-auto max-h-[90vh]"
+          >
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="font-display text-2xl font-bold text-neutral-900">Upload Room</h2>
+              <button 
+                onClick={onClose}
+                className="p-2 hover:bg-neutral-100 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-neutral-400" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-neutral-500 px-1">Room Title</label>
+                <input 
+                  required
+                  type="text" 
+                  placeholder="e.g. Modern Minimalist Penthouse" 
+                  className="w-full input-field py-3 text-lg"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  id="upload-title"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-neutral-500 px-1">Monthly Rental Price (R)</label>
+                  <div className="relative">
+                    <Coins className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                    <input 
+                      required
+                      type="number" 
+                      placeholder="0.00" 
+                      className="w-full input-field pl-9 py-3"
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      id="upload-price"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-neutral-500 px-1">Location Address</label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                  <input 
+                    required
+                    type="text" 
+                    placeholder="123 Sky St, Cloud City" 
+                    className="w-full input-field pl-9 py-3"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    id="upload-address"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-neutral-500 px-1">Description</label>
+                <textarea 
+                  required
+                  rows={4}
+                  placeholder="Tell us about the room..." 
+                  className="w-full input-field py-3 resize-none"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  id="upload-description"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <label className="text-sm font-semibold text-neutral-500">Room Image URL</label>
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-neutral-300">Optional</span>
+                </div>
+                <div className="relative">
+                  <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                  <input 
+                    type="url" 
+                    placeholder="https://..." 
+                    className="w-full input-field pl-9 py-3"
+                    value={formData.imageUrl}
+                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                    id="upload-image"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full btn-primary py-4 text-lg mt-4 shadow-lg shadow-sky-500/25 active:shadow-none"
+                id="submit-upload"
+              >
+                {loading ? 'Publishing...' : 'Publish Listing'}
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}

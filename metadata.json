@@ -1,0 +1,8 @@
+{
+  "name": "eRoom Connect",
+  "description": "A platform to search back rooms for rental in our hoods, connect with landlords, and find the most affordable room rentals  ",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": []
+}
