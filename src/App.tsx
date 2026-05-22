@@ -78,7 +78,14 @@ export default function App() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('explore');
   const [preferredRole, setPreferredRole] = useState<UserRole>('client');
-  const [properties, setProperties] = useState<Property[]>(DUMMY_PROPERTIES);
+  const [properties, setProperties] = useState<Property[]>(() => {
+    try {
+      const cached = localStorage.getItem('eroom_properties');
+      return cached ? JSON.parse(cached) : DUMMY_PROPERTIES;
+    } catch {
+      return DUMMY_PROPERTIES;
+    }
+  });
   const [filters, setFilters] = useState<SearchFilters>({
     location: '',
     minPrice: 0,
@@ -90,10 +97,22 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       if (firebaseUser) {
+        // 1. Immediately look for locally cached profile to enable instant offline preview/load
+        const cachedUserStr = localStorage.getItem(`eroom_user_${firebaseUser.uid}`);
+        if (cachedUserStr) {
+          try {
+            setUser(JSON.parse(cachedUserStr));
+          } catch (e) {
+            console.warn("Error parsing cached user profile:", e);
+          }
+        }
+
         try {
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
-            setUser(userDoc.data() as UserProfile);
+            const userData = userDoc.data() as UserProfile;
+            setUser(userData);
+            localStorage.setItem(`eroom_user_${firebaseUser.uid}`, JSON.stringify(userData));
           } else {
             // New user - use preferred role from AuthModal
             const newUser: UserProfile = {
@@ -106,17 +125,22 @@ export default function App() {
             };
             await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
             setUser(newUser);
+            localStorage.setItem(`eroom_user_${firebaseUser.uid}`, JSON.stringify(newUser));
           }
         } catch (error) {
-          console.error("Error setting up user profile", error);
-          // Fallback user if Firebase setup failed
-          setUser({
-            uid: firebaseUser.uid,
-            displayName: firebaseUser.displayName || 'User',
-            email: firebaseUser.email || '',
-            role: 'client',
-            createdAt: Date.now()
-          });
+          console.warn("Could not retrieve online user profile, using fallback/local profile:", error);
+          
+          // 2. If no local cached profile exists, construct a robust offline-capable fallback
+          if (!localStorage.getItem(`eroom_user_${firebaseUser.uid}`)) {
+            const fallbackUser: UserProfile = {
+              uid: firebaseUser.uid,
+              displayName: firebaseUser.displayName || 'User',
+              email: firebaseUser.email || '',
+              role: 'client', // Default fallback role
+              createdAt: Date.now()
+            };
+            setUser(fallbackUser);
+          }
         }
       } else {
         setUser(null);
@@ -125,7 +149,7 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [preferredRole]);
 
   // Properties Fetch Effect
   useEffect(() => {
@@ -135,13 +159,15 @@ export default function App() {
         const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Property));
         if (fetched.length > 0) {
           setProperties(fetched);
+          localStorage.setItem('eroom_properties', JSON.stringify(fetched));
         }
       }, (error) => {
-        console.warn("Firestore error (likely setup incomplete):", error);
+        console.warn("Firestore onSnapshot error (likely client is offline or setup incomplete):", error);
+        // Try getting from local state or localStorage automatically handled by lazy initial state
       });
       return () => unsubscribe();
     } catch (e) {
-      console.warn("Firestore collection not available yet.");
+      console.warn("Firestore collection not available yet, using offline/cached data.");
     }
   }, []);
 
@@ -163,8 +189,29 @@ export default function App() {
   };
 
   const handleUpload = async (newProperty: Partial<Property>) => {
-    if (!user || user.role !== 'agent') return;
+    if (!user) return;
     
+    // Create direct local optimistic update representing the new room listing
+    const localProp: Property = {
+      id: `local_${Date.now()}`,
+      title: newProperty.title || 'Untitled Room',
+      description: newProperty.description || '',
+      price: newProperty.price || 0,
+      type: newProperty.type || 'rental',
+      address: newProperty.address || '',
+      location: newProperty.location || { lat: 0, lng: 0 },
+      images: newProperty.images || [],
+      agentId: user.uid,
+      agentName: user.displayName,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    // Optimistically prepend the listing
+    const updatedList = [localProp, ...properties];
+    setProperties(updatedList);
+    localStorage.setItem('eroom_properties', JSON.stringify(updatedList));
+
     try {
       await addDoc(collection(db, 'properties'), {
         ...newProperty,
@@ -174,7 +221,7 @@ export default function App() {
         updatedAt: serverTimestamp(),
       });
     } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'properties');
+      console.warn("Failed to publish room online (client may be offline), room has been saved locally:", error);
     }
   };
 
@@ -182,10 +229,11 @@ export default function App() {
     if (!user) return;
     try {
       const updatedUser = { ...user, role };
-      await setDoc(doc(db, 'users', user.uid), updatedUser);
       setUser(updatedUser);
+      localStorage.setItem(`eroom_user_${user.uid}`, JSON.stringify(updatedUser));
+      await setDoc(doc(db, 'users', user.uid), updatedUser);
     } catch (e) {
-      console.error("Failed to update role", e);
+      console.warn("Failed to sync role update online (client may be offline), role updated locally:", e);
     }
   };
 
