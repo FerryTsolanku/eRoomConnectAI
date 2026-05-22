@@ -1,0 +1,18 @@
+{
+  "name": "eRoom Connect",
+  "short_name": "eRoomConnect",
+  "description": "Your hood's mobile-friendly portal to search back rooms for rental, connect with landlords, and find affordable room rentals.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#0ea5e9",
+  "icons": [
+    {
+      "src": "/src/assets/images/eroom_logo_1779482177717.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
