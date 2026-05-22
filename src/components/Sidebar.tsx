@@ -46,9 +46,12 @@ export default function Sidebar({ isOpen, onClose, user, onSignOut, activeTab, s
           >
             <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-sky-500 rounded-xl flex items-center justify-center">
-                  <Home className="text-white w-6 h-6" />
-                </div>
+                <img 
+                  src="/src/assets/images/eroom_logo_1779482177717.png" 
+                  alt="eRoom Connect Logo" 
+                  className="w-10 h-10 rounded-xl object-cover shadow-sm ring-1 ring-sky-100"
+                  referrerPolicy="no-referrer"
+                />
                 <h1 className="font-display text-2xl font-bold text-sky-900 tracking-tight">eRoom Connect</h1>
               </div>
               <button 

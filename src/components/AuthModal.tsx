@@ -48,9 +48,12 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
             {/* Header */}
             <div className="flex items-center justify-center mb-8 relative">
               <div className="text-center">
-                <div className="w-12 h-12 bg-sky-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-sky-500/20">
-                  <Home className="text-white w-7 h-7" />
-                </div>
+                <img 
+                  src="/src/assets/images/eroom_logo_1779482177717.png" 
+                  alt="eRoom Connect Logo" 
+                  className="w-16 h-16 rounded-2xl object-cover mx-auto mb-3 shadow-lg shadow-sky-500/10 ring-2 ring-sky-100"
+                  referrerPolicy="no-referrer"
+                />
                 <h2 className="font-display text-2xl font-bold text-neutral-900">eRoom Connect</h2>
                 <p className="text-neutral-400 text-sm">Join the hood's favorite portal</p>
               </div>

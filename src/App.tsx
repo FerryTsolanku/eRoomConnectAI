@@ -73,6 +73,32 @@ const DUMMY_PROPERTIES: Property[] = [
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [splashVisible, setSplashVisible] = useState(true);
+  const [splashStep, setSplashStep] = useState(0);
+
+  // Splash Screen steps timer for beautiful launching experience
+  useEffect(() => {
+    const steps = [
+      "Accessing local hoods...",
+      "Securing tenant portal...",
+      "Fetching affordable rooms...",
+      "Welcome to eRoom Connect!"
+    ];
+    
+    const interval = setInterval(() => {
+      setSplashStep(prev => (prev < steps.length - 1 ? prev + 1 : prev));
+    }, 2400 / steps.length);
+
+    const timer = setTimeout(() => {
+      setSplashVisible(false);
+    }, 2400);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timer);
+    };
+  }, []);
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -237,16 +263,80 @@ export default function App() {
     }
   };
 
-  if (loading) {
+  if (loading || splashVisible) {
+    const steps = [
+      "Accessing local hoods...",
+      "Securing tenant portal...",
+      "Fetching affordable rooms...",
+      "Welcome to eRoom Connect!"
+    ];
+
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-white">
-        <motion.div 
-          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-          transition={{ repeat: Infinity, duration: 1.5 }}
-          className="w-16 h-16 bg-sky-500 rounded-2xl flex items-center justify-center shadow-lg shadow-sky-500/20"
-        >
-          <Home className="text-white w-8 h-8" />
-        </motion.div>
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-white p-6 overflow-hidden select-none">
+        <div className="flex flex-col items-center max-w-sm text-center space-y-8">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 100, damping: 15 }}
+            className="relative"
+          >
+            <div className="absolute -inset-4 bg-sky-300/10 rounded-full blur-xl animate-pulse" />
+            <div className="absolute -inset-10 bg-sky-200/5 rounded-full blur-2xl" />
+            
+            <img 
+              src="/src/assets/images/eroom_logo_1779482177717.png" 
+              alt="eRoom Connect Logo" 
+              className="relative w-36 h-36 rounded-[2.5rem] object-cover shadow-2xl shadow-sky-500/10 ring-4 ring-sky-100/50"
+              referrerPolicy="no-referrer"
+            />
+          </motion.div>
+
+          <div className="space-y-4">
+            <motion.div
+              initial={{ y: 10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <h2 className="font-display text-4xl font-extrabold text-neutral-900 tracking-tight">
+                eRoom <span className="text-sky-500">Connect</span>
+              </h2>
+              <p className="text-neutral-400 text-xs font-bold uppercase tracking-widest mt-1">
+                Your Hood's Portal
+              </p>
+            </motion.div>
+
+            <div className="w-48 h-1 bg-neutral-100 rounded-full overflow-hidden mx-auto">
+              <motion.div 
+                initial={{ width: "0%" }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 2.4, ease: "easeInOut" }}
+                className="h-full bg-sky-500 rounded-full"
+              />
+            </div>
+
+            <motion.p
+              key={splashStep}
+              initial={{ y: 5, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -5, opacity: 0 }}
+              className="text-neutral-500 font-medium text-sm h-5"
+            >
+              {steps[splashStep]}
+            </motion.p>
+          </div>
+        </div>
+
+        <div className="absolute bottom-10 flex flex-col items-center text-center gap-1.5 opacity-60">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+            Securely encrypted portal
+          </p>
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+              Offline Cache Ready
+            </span>
+          </div>
+        </div>
       </div>
     );
   }
@@ -262,8 +352,14 @@ export default function App() {
           >
             <Menu className="w-6 h-6 text-neutral-600" />
           </button>
-          <div className="hidden sm:block">
-            <h1 className="font-display text-2xl font-bold text-sky-900 tracking-tight">eRoom Connect</h1>
+          <div className="flex items-center gap-2.5">
+            <img 
+              src="/src/assets/images/eroom_logo_1779482177717.png" 
+              alt="eRoom Connect Logo" 
+              className="w-10 h-10 rounded-xl object-cover shadow-sm ring-1 ring-sky-100"
+              referrerPolicy="no-referrer"
+            />
+            <h1 className="font-display text-lg sm:text-2xl font-bold text-sky-900 tracking-tight">eRoom Connect</h1>
           </div>
         </div>
 
