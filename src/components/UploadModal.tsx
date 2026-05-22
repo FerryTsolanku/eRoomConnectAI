@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { X, Upload, Home, MapPin, Coins, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Property } from '../types';
@@ -16,10 +16,49 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
     price: '',
     type: 'rental' as 'rental' | 'sale',
     address: '',
-    imageUrl: '',
   });
 
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [imageBase64, setImageBase64] = useState<string>('');
+  const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    
+    // Check file size (e.g. limit to 2MB to keep Base64 document payloads friendly in Firestore)
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Please upload an image smaller than 2MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result && typeof e.target.result === 'string') {
+        setImagePreview(e.target.result);
+        setImageBase64(e.target.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const onDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileChange(e.dataTransfer.files[0]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,9 +67,19 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
       await onUpload({
         ...formData,
         price: Number(formData.price),
-        images: [formData.imageUrl || `https://picsum.photos/seed/${Math.random()}/1000/800`],
+        images: [imageBase64 || `https://picsum.photos/seed/${Math.random()}/1000/800`],
         location: { lat: 0, lng: 0 }, // Placeholder
       });
+      // Reset state
+      setFormData({
+        title: '',
+        description: '',
+        price: '',
+        type: 'rental',
+        address: '',
+      });
+      setImagePreview('');
+      setImageBase64('');
       onClose();
     } catch (err) {
       console.error(err);
@@ -129,20 +178,67 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between px-1">
-                  <label className="text-sm font-semibold text-neutral-500">Room Image URL</label>
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-neutral-300">Optional</span>
+                  <label className="text-sm font-semibold text-neutral-500">Room Image</label>
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-sky-500">Required</span>
                 </div>
-                <div className="relative">
-                  <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                  <input 
-                    type="url" 
-                    placeholder="https://..." 
-                    className="w-full input-field pl-9 py-3"
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    id="upload-image"
-                  />
-                </div>
+                
+                <input 
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      handleFileChange(e.target.files[0]);
+                    }
+                  }}
+                  accept="image/*"
+                  className="hidden"
+                  id="upload-image-file"
+                />
+
+                {imagePreview ? (
+                  <div className="relative group rounded-3xl overflow-hidden border border-neutral-200 shadow-sm aspect-video bg-neutral-100">
+                    <img 
+                      src={imagePreview} 
+                      alt="Room Preview" 
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImagePreview('');
+                          setImageBase64('');
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}
+                        className="p-3 bg-red-500 hover:bg-red-600 rounded-full text-white shadow-lg font-bold transition-all transform scale-90 group-hover:scale-100"
+                        id="remove-image-btn"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onDragOver={onDragOver}
+                    onDragLeave={onDragLeave}
+                    onDrop={onDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-3 min-h-[160px]
+                      ${isDragging 
+                        ? 'border-sky-500 bg-sky-50/50 scale-[0.99]' 
+                        : 'border-neutral-200 hover:border-sky-300 hover:bg-sky-50/10'}`}
+                    id="dropzone"
+                  >
+                    <div className="w-12 h-12 bg-sky-50 rounded-2xl flex items-center justify-center text-sky-500 shadow-inner overflow-hidden">
+                      <Upload className="w-6 h-6 animate-bounce" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-neutral-700">Drag and drop your image here</p>
+                      <p className="text-xs text-neutral-400 mt-1">or click to browse from files (Max 2MB)</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <button
